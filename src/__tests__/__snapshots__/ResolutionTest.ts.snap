@@ -1,0 +1,236 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`RelicResolver A concrete class with multiple hierarchical interfaces can be resolved 1`] = `
+"[
+  [
+    \\"/fake/Fake.ts::Fake\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake\\",
+          \\"filePath\\": \\"/fake/Fake.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/Fake2.ts::Fake2\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake2\\",
+          \\"filePath\\": \\"/fake/Fake2.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface.ts::FakeInterface\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake2\\",
+          \\"filePath\\": \\"/fake/Fake2.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/Fake3.ts::Fake3\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2.ts::FakeInterface2\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2Parent.ts::FakeInterface2Parent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2GrandParent.ts::FakeInterface2GrandParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2GreatGrandParent.ts::FakeInterface2GreatGrandParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2a.ts::FakeInterface2a\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2aParent.ts::FakeInterface2aParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2aGrandParent.ts::FakeInterface2aGrandParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2aGreatGrandParent.ts::FakeInterface2aGreatGrandParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2b.ts::FakeInterface2b\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2bParent.ts::FakeInterface2bParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2bGrandParent.ts::FakeInterface2bGrandParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface2bGreatGrandParent.ts::FakeInterface2bGreatGrandParent\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake3\\",
+          \\"filePath\\": \\"/fake/Fake3.ts\\"
+        }
+      ]
+    }
+  ]
+]"
+`;
+
+exports[`RelicResolver A concrete class with no interfaces can be resolved 1`] = `
+"[
+  [
+    \\"/fake/Fake.ts::Fake\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake\\",
+          \\"filePath\\": \\"/fake/Fake.ts\\"
+        }
+      ]
+    }
+  ]
+]"
+`;
+
+exports[`RelicResolver A concrete class with one flat interface can be resolved 1`] = `
+"[
+  [
+    \\"/fake/Fake.ts::Fake\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake\\",
+          \\"filePath\\": \\"/fake/Fake.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/Fake2.ts::Fake2\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake2\\",
+          \\"filePath\\": \\"/fake/Fake2.ts\\"
+        }
+      ]
+    }
+  ],
+  [
+    \\"/fake/FakeInterface.ts::FakeInterface\\",
+    {
+      \\"registrations\\": [
+        {
+          \\"name\\": \\"Fake2\\",
+          \\"filePath\\": \\"/fake/Fake2.ts\\"
+        }
+      ]
+    }
+  ]
+]"
+`;

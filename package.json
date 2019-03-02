@@ -1,0 +1,19 @@
+{
+  "name": "reliquery-ts",
+  "version": "0.0.0",
+  "main": "index.js",
+  "author": "Edward Drapkin <Edward.Drapkin@flexshopper.com>",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "ts-jest": "^24.0.0",
+    "ts-node": "^8.0.2",
+    "ts-utils": "^6.0.7",
+    "tsutils": "^3.8.0",
+    "typescript": "^3.3.3333"
+  },
+  "dependencies": {
+    "@types/jest": "^24.0.9",
+    "jest": "^24.1.0",
+    "ts-morph": "^1.2.0"
+  }
+}
