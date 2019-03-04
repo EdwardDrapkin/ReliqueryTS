@@ -1,5 +1,4 @@
-import { InjectableClassification, NamedFileItem } from "Types";
-import { InjectableFunction } from "cli";
+import { ClassInjectableClassification, FunctionInjectableClassification, NamedFileItem } from "Types";
 import Project from "ts-morph";
 import path from "path";
 
@@ -17,6 +16,13 @@ export class CodeWriter {
         }
     } = {};
 
+    curriedFunctions: {
+        [name: string]: {
+            item: NamedFileItem,
+            paramList: NamedFileItem[]
+        }
+    } = {};
+
     resolutions: {
         [name: string]: {
             item: NamedFileItem,
@@ -31,14 +37,17 @@ export class CodeWriter {
 
     registerConcreteFactory(name: string, item: NamedFileItem, paramList: NamedFileItem[] = []) {
         this.concreteFactories[name] = { item, paramList }
-        this.registerResolution(item.name, item, name);
     }
 
     registerResolution(name: string, item: NamedFileItem, factory: string = item.name) {
         this.resolutions[name] = { item, factory };
     }
 
-    registerInjectableFunction(fn: InjectableFunction) {
+    registerCurriedFunction(name: string, item: NamedFileItem, paramList: NamedFileItem[]) {
+        this.curriedFunctions[name] = { item, paramList }
+    }
+
+    registerFunctionInjectableClassification(fn: FunctionInjectableClassification, curried: boolean) {
         this.registerFunctionFactory(fn.name, fn);
         this.registerResolution(`typeof ${fn.name}`, fn, fn.name);
         if (fn.interfaces) {
@@ -49,19 +58,41 @@ export class CodeWriter {
                 })
             })
         }
+
+        if (curried) {
+            this.registerCurriedFunction(fn.name, fn, fn.parameters.map(p => p.type))
+        }
     }
 
-    registerInjectableClassification(fn: InjectableClassification) {
-        if (fn.interfaces) {
-            fn.interfaces.forEach(iface => {
-                this.registerResolution(iface.implemented.name, iface.implemented, fn.name);
-                iface.parents.forEach(parent => {
-                    this.registerResolution(parent.name, parent, fn.name);
-                })
-            })
-        }
+    registerClassInjectableClassification(fn: ClassInjectableClassification, injectable: boolean) {
+        this.registerConcreteFactory(fn.name, fn, fn.parameters.map(p => p.type))
 
-        this.registerResolution(fn.name, fn, fn.name);
+        if (injectable) {
+            if (fn.interfaces) {
+                fn.interfaces.forEach(iface => {
+                    this.registerResolution(iface.implemented.name, iface.implemented, fn.name);
+                    iface.parents.forEach(parent => {
+                        this.registerResolution(parent.name, parent, fn.name);
+                    })
+                })
+            }
+
+            this.registerResolution(fn.name, fn, fn.name);
+        }
+    }
+
+    reapCurries() {
+        const curries: { [fn: string]: string } = {};
+        Object.keys(this.curriedFunctions).forEach(key => {
+            const fn = this.curriedFunctions[key];
+            curries[key] = `() => ${key}(` +
+                fn.paramList.map(param => {
+                    return `Container.resolutions["${param.name}"]()`
+                }).join(', ') +
+                ')'
+        })
+
+        return curries;
     }
 
     reapImports() {
@@ -75,6 +106,7 @@ export class CodeWriter {
             imports[item.filePath][item.name] = true;
         };
 
+        Object.keys(this.curriedFunctions).forEach(key => reap(this.curriedFunctions[key].item));
         Object.keys(this.concreteFactories).forEach(key => reap(this.concreteFactories[key].item));
         Object.keys(this.functionFactories).forEach(key => reap(this.functionFactories[key].item));
         Object.keys(this.resolutions).forEach(key => reap(this.resolutions[key].item));
@@ -123,6 +155,7 @@ export class CodeWriter {
         const writer = project.createWriter();
         const imports = this.reapImports();
         const factories = this.reapFactories();
+        const curries = this.reapCurries();
         const resolutions = this.reapResolutions();
 
         const baseUrl = path.resolve(JSON.parse(project.getFileSystem().readFileSync(tsConfigFilePath)).compilerOptions.baseUrl)
@@ -147,6 +180,15 @@ export class CodeWriter {
             writer.write('};');
             writer.newLine();
 
+            writer.write('static readonly curried = {').indentBlock(() => {
+                Object.keys(curries).map(name => {
+                    writer.write(`"${name}": ${curries[name]},`)
+                    writer.newLine();
+                });
+            });
+            writer.write('};');
+            writer.newLine();
+
             writer.write('static readonly resolutions = {').indentBlock(() => {
                 Object.keys(resolutions).map(name => {
                     const resolution = resolutions[name];
@@ -160,6 +202,13 @@ export class CodeWriter {
             Object.keys(resolutions).map(name => {
                 writer.write(`static get${CodeWriter.makeGetterReady(name)}(): ${name}`).block(() => {
                     writer.write(`return Container.resolutions["${name}"]();`);
+                });
+                writer.newLine();
+            });
+
+            Object.keys(curries).map(name => {
+                writer.write(`static getCurried${CodeWriter.makeGetterReady(name)}(): ReturnType<typeof ${name}>`).block(() => {
+                    writer.write(`return Container.curried["${name}"]();`);
                 });
                 writer.newLine();
             });

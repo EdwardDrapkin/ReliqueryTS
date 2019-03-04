@@ -33,16 +33,19 @@ yarn babel-node src/cli.ts -t /path/to/tsconfig.json
 Once you've annotated some code, you can run the script against your code and expect output that looks like this (example is generated from `src/fixtures`):
 
 ```ts
-
-import { Basic, InjectedExample, noArgs, withArgs, A, D, C, F } from 'fixtures/Basic';
+import { curriedWithArgs, Basic, InjectedExample, noArgs, withArgs, A, D, C, F } from 'fixtures/Basic';
 import { B } from 'fixtures/B';
 
 export class Container {
     static readonly factories = {
         "noArgs": (): typeof noArgs => noArgs,
         "withArgs": (): typeof withArgs => withArgs,
+        "curriedWithArgs": (): typeof curriedWithArgs => curriedWithArgs,
         "Basic": (): Basic => new Basic(),
         "InjectedExample": (): InjectedExample => new InjectedExample(Container.resolutions["Basic"](), Container.resolutions["B"]()),
+    };
+    static readonly curried = {
+        "curriedWithArgs": () => curriedWithArgs(Container.resolutions["A"](), Container.resolutions["B"]()),
     };
     static readonly resolutions = {
         "A": (): A => Container.factories["Basic"](),
@@ -53,7 +56,7 @@ export class Container {
         "typeof noArgs": (): typeof noArgs => Container.factories["noArgs"](),
         "F": (): F => Container.factories["noArgs"](),
         "typeof withArgs": (): typeof withArgs => Container.factories["withArgs"](),
-        "InjectedExample": (): InjectedExample => Container.factories["InjectedExample"](),
+        "typeof curriedWithArgs": (): typeof curriedWithArgs => Container.factories["curriedWithArgs"](),
     };
     static getA(): A {
         return Container.resolutions["A"]();
@@ -79,10 +82,14 @@ export class Container {
     static getWithArgs(): typeof withArgs {
         return Container.resolutions["typeof withArgs"]();
     }
-    static getInjectedExample(): InjectedExample {
-        return Container.resolutions["InjectedExample"]();
+    static getCurriedWithArgs(): typeof curriedWithArgs {
+        return Container.resolutions["typeof curriedWithArgs"]();
+    }
+    static getCurriedCurriedWithArgs(): ReturnType<typeof curriedWithArgs> {
+        return Container.curried["curriedWithArgs"]();
     }
 }
+
 ```
 
 ## Limitations
@@ -98,7 +105,7 @@ Don't use this.  Seriously, don't.
 - [X] `@AutoConstructed` for automatic zero-arg factory generation
 - [X] `Container` class generation
 - [ ] `@Provided` for class property injection
-- [ ] `@AutoCurried` for auto-currying functions similar to constructor arguments
+- [X] `@AutoCurried` for auto-currying functions similar to constructor arguments
 - [ ] Add `InstantiationType` to `@Relic` for singletons, etc.
 - [ ] Support for generating async import statements
 - [ ] Babel plugin? 
