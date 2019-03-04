@@ -9,7 +9,7 @@ Reliquery is a configuration-free code-generating IoC compiler.  It uses decorat
 
 ### Annotations
 
-There are two annotations that are currently supported: `@Relic` and `@AutoConstructed`.  
+There are three annotations that are currently supported: `@Relic`, `@AutoConstructed`, and `@AutoCurried`.  
 
 `@Relic` tags a class or function as injectable and makes it available on its own name and interfaces it implements (and that interface's hierarchy).  Because TS does not support function decorators, you have to declare a function like so to add it to the container (looking for suggestions on ways to improve this):
 
@@ -18,6 +18,10 @@ const Foo = Relic(function Foo() { });
 ```
 
 `@AutoConstructed` registers a class to be automatically constructed by the container.  It will get added to the container resolutions (e.g. `@AutoConstructed class Foo {}` will be available as `getFoo()`) as a no-arg factory function.  Constructor arguments are automatically resolved (*without decorators*) and filled in by the container.
+
+Relics have their constructors managed the same way that AutoConstructed members do, however they're visible to other relics in the reliquery.
+
+`@AutoCurried` creates a copy of the tagged function with the prefix `curried` on the container (e.g. `fooBar()` becomes `curriedFooBar()` as a view of the function with all arguments provided by the container.
 
 ### CLI 
 
