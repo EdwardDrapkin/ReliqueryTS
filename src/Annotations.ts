@@ -1,13 +1,20 @@
 interface AnyClass {
-    new(): any;
+    new(...args: any[]): {};
 }
 
-export function Relic<C extends AnyClass>(node: C): any {
-    return undefined;
+interface AnyFunction {
+    (...args: any[]): any
 }
 
-export function NotRelic(arget: Object,
-                         propertyKey: string,
-                         descriptor: TypedPropertyDescriptor<any>): any {
-
+export function Relic<C extends AnyClass | AnyFunction>(node: C): C {
+    return node;
 }
+
+export function AutoCurried<F extends AnyFunction>(f: F) {
+    return f;
+}
+
+export function AutoConstructed(target: AnyClass) {
+    return target;
+}
+

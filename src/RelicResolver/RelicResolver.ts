@@ -8,10 +8,10 @@ interface LookupTableItem {
 
 
 export class RelicResolver {
-    private readonly lookupTable = new Map<string, LookupTableItem>();
+    private lookupTable = new Map<string, LookupTableItem>();
 
     private static toIdentifierString(item: NamedFileItem) {
-        return `${item.filePath}::${item.name}`;
+        return `${item.name}`;
     }
 
     private static getEmptyTableItem() {
@@ -53,8 +53,7 @@ export class RelicResolver {
         });
     }
 
-    lookup(item: NamedFileItem) {
-        const id = RelicResolver.toIdentifierString(item);
+    lookup(id: string) {
         const entry = this.lookupTable.get(id);
 
         if (!entry) {
@@ -75,5 +74,9 @@ export class RelicResolver {
 
     serialize() {
         return JSON.stringify([...this.lookupTable], null, 2);
+    }
+
+    deserialize(input: string) {
+        this.lookupTable = new Map(JSON.parse(input));
     }
 }

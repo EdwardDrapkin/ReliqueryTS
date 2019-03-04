@@ -1,0 +1,28 @@
+{
+  "presets": [
+    "@babel/env",
+    "@babel/typescript"
+  ],
+  "plugins": [
+    [
+      "module-resolver",
+      {
+        "root": [
+          "./src/"
+        ],
+        "extensions": [
+          ".ts"
+        ]
+      }
+    ],
+    "@babel/proposal-object-rest-spread",
+    [
+      "@babel/plugin-proposal-decorators",
+      {
+        "decoratorsBeforeExport": true,
+        "legacy": false
+      }
+    ],
+    "@babel/proposal-class-properties"
+  ]
+}
