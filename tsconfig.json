@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+      "jsx": "react",
+    "outDir": "./dist/",
+    "baseUrl": "./src/",
+    "paths": {
+      "*": [
+        "./*"
+      ]
+    },
+    "target": "es2018",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "declaration": true,
+    "declarationMap": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "plugins": [
+      {
+        "transform": "@zerollup/ts-transform-paths"
+      }
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "paths": [
+    "./"
+  ]
+}

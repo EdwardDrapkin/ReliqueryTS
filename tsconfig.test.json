@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "outDir": "./test/dist/",
+    "baseUrl": "./test/src/",
+    "paths": {
+      "*": [
+        "./*"
+      ]
+    },
+    "target": "es5",
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "declaration": true,
+    "declarationMap": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "jsx": "react",
+    "plugins": [
+      {
+        "transform": "./src/index.ts"
+      }
+    ]
+  },
+  "include": [
+    "test/src/**/*.ts",
+    "test/src/**/*.tsx"
+  ],
+  "paths": [
+    "./"
+  ]
+}
