@@ -11,6 +11,5 @@ export class ObjectLiteralDeclaration extends ObjectLiteral implements Statement
   out() {
     this.writeIndented(`const ${this.name} = `);
     super.out();
-    return this;
   }
 }

@@ -40,7 +40,7 @@ export class SwitchCase extends NamedBaseWriter {
 
 
       if(this.defaultCase.length > 0) {
-        this.write('default: ');
+        this.writeIndented('default: ');
         if (this.defaultCase.length > 1) {
           this.block(() => this.writeStatements(this.defaultCase))
         } else {

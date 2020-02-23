@@ -18,10 +18,10 @@ export class ObjectLiteral extends BaseWriter {
   }
 
   out() {
-    this.terminatedBlock(() => {
+    this.block(() => {
       this.members.forEach(([name, value]) => {
         this.writeLine(`${name}: ${value},`);
       });
-    });
+    }, true);
   }
 }

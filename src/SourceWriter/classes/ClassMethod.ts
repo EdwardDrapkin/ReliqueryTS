@@ -45,7 +45,7 @@ export class ClassMethod extends NamedBaseWriter {
     }
     this.write(')');
     if(this.returnType) {
-      this.write(`: ${this.returnType}`)
+      this.write(`: ${this.returnType} `)
     }
     this.block(() => this.writeStatements(this.statements));
   }

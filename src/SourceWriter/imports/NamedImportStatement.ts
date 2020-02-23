@@ -1,8 +1,11 @@
 import { NamedImport } from "./NamedImport";
 import { NamedBaseWriter } from "../NamedBaseWriter";
 import { ModuleSpecifier } from "./ModuleSpecifier";
+import { Statement } from "../Statement";
 
-export class NamedImportStatement extends NamedBaseWriter {
+export class NamedImportStatement extends NamedBaseWriter implements Statement {
+  needsSemicolon = true;
+
   private namedImport: NamedImport;
 
   constructor(name: string, namedImport: NamedImport) {
@@ -16,6 +19,5 @@ export class NamedImportStatement extends NamedBaseWriter {
     this.write(this.namedImport.getAsString());
     this.write(' from ');
     this.write(new ModuleSpecifier(this.name).getAsString());
-    this.writeLine(';');
   }
 }

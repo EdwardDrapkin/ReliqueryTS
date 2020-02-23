@@ -1,5 +1,6 @@
 import { BaseWriter } from './BaseWriter';
 import { NamedImportStatement } from "./imports/NamedImportStatement";
+import { Statement } from "./Statement";
 
 export class TypescriptFile extends BaseWriter {
   private imports: NamedImportStatement[] = [];
@@ -17,10 +18,15 @@ export class TypescriptFile extends BaseWriter {
   out() {
     const sections = {
       "import statements": () => {
-        this.write(this.imports.map(statement => statement.getAsString()).join(''));
+        this.write(this.imports.map(statement => {
+          return `${statement.getAsString()}${statement.needsSemicolon ? ';' : ''}`;
+        }).join('\n'));
       },
+
       "generated container": () => {
-        this.write(this.statements.map(statement => statement.getAsString()).join('\n'));
+        this.write(this.statements.map(statement => {
+          return `${statement.getAsString()}${(statement as Statement).needsSemicolon ? ';' : ''}`;
+        }).join('\n'));
       }
     }
 

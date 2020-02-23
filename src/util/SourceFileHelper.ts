@@ -24,6 +24,14 @@ export interface FullyQualifiedSymbol {
   encodedName: string;
 }
 
+export function encodeName(path: string, name: string) {
+  // we need to specially encode dir separators otherwise this happens:
+  // test/foo.ts::Foo => test_foo_ts_Foo
+  // test-foo.ts::Foo => test_foo_ts_Foo
+  return `${path}_${name}`
+    .replace(/\//g, '_dd_')
+    .replace(/\W/g, '_');
+}
 export class SourceFileHelper<T extends Node> {
   public hasProcessed: boolean = false;
   protected readonly logger: Signale = subLogger(this.constructor.name);
@@ -69,12 +77,7 @@ export class SourceFileHelper<T extends Node> {
     return {
       relativeFilePath,
       name: nameStringRepresentation,
-      encodedName: `${relativeFilePath}_${nameStringRepresentation}`
-        // we need to specially encode dir separators otherwise this happens:
-        // test/foo.ts::Foo => test_foo_ts_Foo
-        // test-foo.ts::Foo => test_foo_ts_Foo
-        .replace(/\//g, '_dd_')
-        .replace(/\W/g, '_'),
+      encodedName: encodeName(relativeFilePath, nameStringRepresentation)
     };
   }
 

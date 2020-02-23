@@ -22,20 +22,19 @@ export abstract class BaseWriter {
     this.indentationLevel = this.indentationLevel - by || 0;
   }
 
-  block(callback: () => void) {
-    this.write(' {\n');
+  block(callback: () => void, skipNewline: boolean = false) {
+    this.write('{\n');
     this.increaseIndent();
     callback();
     this.decreaseIndent();
-    this.writeLine('}');
+    if(skipNewline) {
+      this.writeIndented('}');
+    } else {
+      this.writeLine('}');
+    }
     return this;
   }
 
-  terminatedBlock(callback: () => void) {
-    this.block(callback);
-    this.content = this.content.substr(0, this.content.length - 1) + ';\n';
-    return this;
-  }
 
   writeLine(content: string = '') {
     this.writeIndented(content + '\n');

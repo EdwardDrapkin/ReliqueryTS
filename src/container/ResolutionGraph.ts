@@ -172,7 +172,7 @@ export class ResolutionGraph {
         throw new Error(`Could not re-resolve ${resolvesForKey}`);
       }
 
-      const potentialResolutions = this.resolvesFor[resolvesForKey].reduce((acc, curr) => {
+      let potentialResolutions = this.resolvesFor[resolvesForKey].reduce((acc, curr) => {
         let index = -1;
         acc.forEach((item, idx) => {
           if (item.encodedName === curr.encodedName) {
@@ -188,6 +188,10 @@ export class ResolutionGraph {
       }, [] as ResolutionGraphNode[]);
 
       if (potentialResolutions.length > 1) {
+        if (this.lookupTable.interfaces[resolvesForKey]) {
+          console.warn(`Multiple resolutions for interface ${resolvesForKey} found, it will not be resolveable.`);
+          return;
+        }
         throw new Error(`Multiple resolutions for ${resolvesForKey} found`);
       }
 

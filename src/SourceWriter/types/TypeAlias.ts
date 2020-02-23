@@ -1,7 +1,10 @@
 import { NamedBaseWriter } from '../NamedBaseWriter';
 import { AssignmentExpression } from "../AssignmentExpression";
+import { Statement } from "../Statement";
 
-export class TypeAlias extends NamedBaseWriter {
+export class TypeAlias extends NamedBaseWriter implements Statement {
+  needsSemicolon = true;
+
   private initializer: AssignmentExpression | undefined = undefined;
 
   setInitializer(initializer: AssignmentExpression) {
@@ -10,10 +13,9 @@ export class TypeAlias extends NamedBaseWriter {
   }
 
   out() {
-    this.write(`type ${this.name}`);
+    this.writeIndented(`type ${this.name}`);
     if (this.initializer) {
-      this.writeIndented(this.initializer.getAsString());
+      this.write(this.initializer.getAsString());
     }
-    this.writeLine(';');
   }
 }

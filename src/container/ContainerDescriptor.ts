@@ -1,4 +1,4 @@
-import { Project, Scope, VariableDeclarationKind } from 'ts-morph';
+import { Project } from 'ts-morph';
 import { ConstructorVerifier } from './ConstructorVerifier';
 import { ObjectLiteralDeclaration } from '../SourceWriter/ObjectLiteralDeclaration';
 import { TypescriptFile } from '../SourceWriter/TypescriptFile';
@@ -7,14 +7,19 @@ import { ClassMethod } from '../SourceWriter/classes/ClassMethod';
 import { Clazz } from '../SourceWriter/classes/Clazz';
 import { AssignmentExpression } from '../SourceWriter/AssignmentExpression';
 import { TypeAlias } from '../SourceWriter/types/TypeAlias';
-import { NamedImportStatement } from "../SourceWriter/imports/NamedImportStatement";
-import { NamedImport } from "../SourceWriter/imports/NamedImport";
-import { TypeParameter } from "../SourceWriter/types/TypeParameter";
-import { TypedVariable } from "../SourceWriter/types/TypedVariable";
+import { NamedImportStatement } from '../SourceWriter/imports/NamedImportStatement';
+import { NamedImport } from '../SourceWriter/imports/NamedImport';
+import { TypeParameter } from '../SourceWriter/types/TypeParameter';
+import { TypedVariable } from '../SourceWriter/types/TypedVariable';
+import { encodeName } from '../util/SourceFileHelper';
+import { InstantiationStatement } from '../SourceWriter/classes/InstantiationStatement';
+import { NullishCoalescingOperator } from '../SourceWriter/control/NullishCoalescingOperator';
+import { Statement } from '../SourceWriter/Statement';
 import { SwitchCase } from "../SourceWriter/control/SwitchCase";
 import { ReturnStatement } from "../SourceWriter/control/ReturnStatement";
-import { NullishCoalescingOperator } from "../SourceWriter/control/NullishCoalescingOperator";
-import { InstantiationStatement } from "../SourceWriter/classes/InstantiationStatement";
+import { VariableAssignmentStatement } from "../SourceWriter/VariableAssignmentStatement";
+import { ThrowStatement } from "../SourceWriter/control/ThrowStatement";
+import { ParentheticalStatement } from "../SourceWriter/ParentheticalStatement";
 
 export interface Resolution {
   name: string;
@@ -75,69 +80,11 @@ export class ContainerWriter {
   ) {}
 
   write() {
-    const singletonOrFactoryMap = Object.keys(this.descriptor.resolutions)
-      .map(resolution => {
-        return {
-          resolution,
-          isSingleton: this.descriptor.resolutions[resolution].isSingleton,
-        };
-      })
-      .reduce(
-        (all, next) => {
-          const {factories, singletons} = all;
-
-          if (next.isSingleton) {
-            singletons.push(next.resolution);
-          }
-          return {
-            factories,
-            singletons,
-          };
-        },
-        {
-          singletons: [],
-          factories: [],
-        } as { singletons: string[]; factories: string[] }
-      );
-
-    const singletonsWithCtor = singletonOrFactoryMap.singletons
-      .map(singleton => {
-        return {
-          singleton,
-          ctor: this.constructorVerifier.getCallableConstructorParams(singleton),
-        };
-      })
-      .reduce(
-        (acc, curr) => {
-          if (curr.ctor.length < 1) {
-            return {
-              ...acc,
-              noArgs: acc.noArgs.concat(curr.singleton),
-            };
-          }
-
-          return {
-            ...acc,
-            args: {
-              ...acc.args,
-              [curr.singleton]: curr.ctor,
-            },
-          };
-        },
-        {
-          noArgs: [],
-          args: {},
-        } as { noArgs: string[]; args: { [encodedName: string]: string[] } }
-      );
-
     const file = new TypescriptFile();
     Object.entries(this.descriptor.importNameMap).forEach(([moduleName, symbolMap]) => {
       Object.entries(symbolMap).forEach(([name, alias]) => {
-        file.add(new NamedImportStatement(
-          `./${moduleName}`,
-          new NamedImport(name).setAlias(alias)
-        ))
-      })
+        file.add(new NamedImportStatement(`./${moduleName}`, new NamedImport(name).setAlias(alias)));
+      });
     });
 
     // prettier-ignore
@@ -166,199 +113,75 @@ export class ContainerWriter {
               .addParameter(new TypedVariable('encodedName').setType('K'))
               .setReturnType('InstanceType<L[K]>')
               .addStatements(() => {
-                  // `return (this.singletons[encodedName] = this.singletons[encodedName] ?? new lookupTable[encodedName]()) as InstanceType<L[K]>;`
-                  return new SwitchCase('encodedName')
-                    .addCase(
-                      singletonsWithCtor.noArgs.map(e => `"${e}"`),
-                      new ReturnStatement(
-                        new AssignmentExpression()
-                          .setLeftHandSide('this.singletons[encodedName]')
-                          .setRightHandSide(
-                            new NullishCoalescingOperator()
-                              .setLeftHandSide('this.singletons[encodedName]')
-                              .setRightHandSide(
-                                new InstantiationStatement('lookupTable[encodedName]')
-                                  .castAs('InstanceType<L[K]>')
-                                  .getAsString()
-                              )
-                              .getAsString()
-                          )
+                const switchStatement = new SwitchCase('encodedName')
+                  .setDefault([
+                    new ThrowStatement(
+                      new InstantiationStatement('Error')
+                        .addParameter('`Could not resolve ${encodedName}!`')
                       )
-                    )
+                  ])
+                Object.entries(this.descriptor.resolutions)
+                  .reduce((acc, curr) => {
+                    let found: number|false = false;
+                    acc.forEach(([, resolution], idx) => {
+                      if(
+                        resolution.name === curr[1].name &&
+                        resolution.isSingleton === curr[1].isSingleton &&
+                        resolution.importPath === curr[1].importPath
+                      ) {
+                        found = idx;
+                      }
+                    })
+
+                    // noinspection PointlessBooleanExpressionJS
+                    if(found === false) {
+                      acc.push([[curr[0]], curr[1]]);
+                    } else {
+                      acc[found][0].push(curr[0]);
+                    }
+
+                    return acc;
+                  }, ([] as [string[], Resolution][]))
+                  .forEach(([name, resolution]) => {
+                    const ctor = this.constructorVerifier.getCallableConstructorParams(encodeName(resolution.importPath, resolution.name));
+                    let statement: Statement =
+                      new InstantiationStatement(`lookupTable["${encodeName(resolution.importPath, resolution.name)}"]`)
+                        .castAs('InstanceType<L[K]>')
+                        .addParameters(ctor.map(a => `this.resolve("${a}")`))
+
+                    if(resolution.isSingleton) {
+                      statement = new ParentheticalStatement()
+                        .setStatement(
+                          new AssignmentExpression()
+                            .setLeftHandSide(`this.singletons["${encodeName(resolution.importPath, resolution.name)}"]`)
+                            .setRightHandSide(
+                              new NullishCoalescingOperator()
+                                .setLeftHandSide(`this.singletons["${encodeName(resolution.importPath, resolution.name)}"]`)
+                                .setRightHandSide(statement.getAsString())
+                                .getAsString()
+                            )
+                            .getAsString()
+                        ).castAs('InstanceType<L[K]>')
+                    }
+
+                    switchStatement.addCase(
+                      name.map(n => `"${n}"`),
+                      new ReturnStatement(statement)
+                    );
+                  });
+
+                return switchStatement;
               })
           )
       )
+      .add(
+        new VariableAssignmentStatement(
+          new TypedVariable('container').setType('Container')
+        )
+          .setExported()
+          .setInitializer(new InstantiationStatement('Container'))
+
+      )
       .getAsString();
-  }
-
-  writeToString() {
-    const errors = this.constructorVerifier.getHumanReadableVerificationErrors();
-
-    if (errors.length > 0) {
-      throw new Error(`Dependency errors:\n${errors.join('\n')}`);
-    }
-
-    const file = this.project.createSourceFile('deleteme', undefined, { overwrite: true });
-
-    const singletonOrFactoryMap = Object.keys(this.descriptor.resolutions)
-      .map(resolution => {
-        return {
-          resolution,
-          isSingleton: this.descriptor.resolutions[resolution].isSingleton,
-        };
-      })
-      .reduce(
-        (all, next) => {
-          const { factories, singletons } = all;
-
-          if (next.isSingleton) {
-            singletons.push(next.resolution);
-          }
-          return {
-            factories,
-            singletons,
-          };
-        },
-        {
-          singletons: [],
-          factories: [],
-        } as { singletons: string[]; factories: string[] }
-      );
-
-    Object.entries(this.descriptor.importNameMap).forEach(([name, symbolMap]) => {
-      file.addImportDeclaration({
-        moduleSpecifier: `./${name}`,
-        namedImports: Object.entries(symbolMap).map(([name, alias]) => ({ name, alias })),
-      });
-    });
-
-    file.addVariableStatement({
-      isExported: false,
-      isDefaultExport: false,
-      declarationKind: VariableDeclarationKind.Const,
-      declarations: [
-        {
-          name: 'lookupTable',
-          initializer: writer => {
-            writer.writeLine('{');
-            Object.entries(this.descriptor.lookupTable).forEach(([name, clazz]) => {
-              writer.writeLine(`${name}: ${clazz},`);
-            });
-            writer.write('} as const');
-          },
-        },
-      ],
-    });
-
-    file.addTypeAlias({
-      name: 'L',
-      type: 'typeof lookupTable',
-    });
-
-    file.addClass({
-      name: 'Container',
-      isExported: true,
-      isDefaultExport: false,
-      properties: [
-        {
-          initializer: '{}',
-          name: 'singletons',
-          scope: Scope.Private,
-          type: '{ [encodedName in keyof L]?: InstanceType<L[encodedName]> }',
-        },
-      ],
-      methods: [
-        {
-          name: 'resolve',
-          returnType: 'InstanceType<L[K]>',
-          typeParameters: [
-            {
-              name: 'K',
-              constraint: 'keyof L',
-            },
-          ],
-          parameters: [
-            {
-              name: 'encodedName',
-              type: 'K',
-            },
-          ],
-          statements: writer => {
-            writer.write('switch(encodedName)');
-            writer.block(() => {
-              const singletonsWithCtor = singletonOrFactoryMap.singletons
-                .map(singleton => {
-                  return {
-                    singleton,
-                    ctor: this.constructorVerifier.getCallableConstructorParams(singleton),
-                  };
-                })
-                .reduce(
-                  (acc, curr) => {
-                    if (curr.ctor.length < 1) {
-                      return {
-                        ...acc,
-                        noArgs: acc.noArgs.concat(curr.singleton),
-                      };
-                    }
-
-                    return {
-                      ...acc,
-                      args: {
-                        ...acc.args,
-                        [curr.singleton]: curr.ctor,
-                      },
-                    };
-                  },
-                  {
-                    noArgs: [],
-                    args: {},
-                  } as { noArgs: string[]; args: { [encodedName: string]: string[] } }
-                );
-
-              singletonsWithCtor.noArgs.forEach(singleton => {
-                writer.writeLine(`case '${singleton}':`);
-              });
-
-              writer.withIndentationLevel(writer.getIndentationLevel() + 1, () => {
-                writer.writeLine(
-                  `return (this.singletons[encodedName] = this.singletons[encodedName] ?? new lookupTable[encodedName]()) as InstanceType<L[K]>;`
-                );
-              });
-
-              Object.entries(singletonsWithCtor.args).forEach(([singleton, args]) => {
-                writer.writeLine(`case '${singleton}':`);
-                writer.withIndentationLevel(writer.getIndentationLevel() + 1, () => {
-                  writer.write(
-                    `return (this.singletons[encodedName] = this.singletons[encodedName] ?? new lookupTable[encodedName](this.resolve("`
-                  );
-
-                  writer.write(args.join('"), this.resolve("'));
-
-                  writer.write(`"))) as InstanceType<L[K]>;`);
-                });
-              });
-
-              writer.writeLine(`default: return new lookupTable[encodedName]() as InstanceType<L[K]>;`);
-            });
-          },
-        },
-      ],
-    });
-
-    file.addVariableStatement({
-      isExported: true,
-      isDefaultExport: false,
-      declarationKind: VariableDeclarationKind.Const,
-      declarations: [
-        {
-          name: 'container',
-          type: 'Container',
-          initializer: 'new Container()',
-        },
-      ],
-    });
-
-    return file.getFullText();
   }
 }

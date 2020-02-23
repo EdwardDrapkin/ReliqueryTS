@@ -1,18 +1,17 @@
 import { Statement } from '../Statement';
 import { NamedBaseWriter } from '../NamedBaseWriter';
-import { TypedVariable } from '../types/TypedVariable';
 
 export class InstantiationStatement extends NamedBaseWriter implements Statement {
   needsSemicolon = true;
 
-  private parameters: TypedVariable[] = [];
+  private parameters: string[] = [];
 
-  addParameter(parameter: TypedVariable) {
+  addParameter(parameter: string) {
     this.parameters.push(parameter);
     return this;
   }
 
-  addParameters(parameters: TypedVariable[]) {
+  addParameters(parameters: string[]) {
     this.parameters.push(...parameters);
     return this;
   }
@@ -20,7 +19,7 @@ export class InstantiationStatement extends NamedBaseWriter implements Statement
   out() {
     this.write(`new ${this.name}(`);
     if (this.parameters.length > 0) {
-      this.write(this.parameters.map(parameter => parameter.getAsString()).join(', '));
+      this.write(this.parameters.join(', '));
     }
     this.write(`)`);
     if (this.typeCast) {
