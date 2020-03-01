@@ -1,6 +1,6 @@
-import { ClassWithHeritage } from '../util/AllClassCollector';
-import { ClassWithConstructor } from '../util/ConstructorCollector';
+import { ClassWithConstructor } from '../compiler/ConstructorCollector';
 import { ResolutionGraph } from './ResolutionGraph';
+import { ClassWithHeritage } from "../compiler/ClassWithHeritage";
 
 export const PRIMITIVES: { [key: string]: true } = {
   string: true,

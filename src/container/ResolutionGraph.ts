@@ -1,9 +1,9 @@
-import { FullyQualifiedSymbol } from '../util/SourceFileHelper';
-import { ClassWithHeritage } from '../util/AllClassCollector';
-import { InterfaceWithHeritage } from '../util/InterfaceCollector';
+import { FullyQualifiedSymbol } from '../compiler/SourceFileHelper';
 import { subLogger } from '../logger';
 import { ContainerDescriptor } from './ContainerDescriptor';
 import crypto from 'crypto';
+import { ClassWithHeritage } from "../compiler/ClassWithHeritage";
+import { InterfaceWithHeritage } from "../compiler/InterfaceWithHeritage";
 
 class ClassAndInterfaceLookupTable {
   public classes: {

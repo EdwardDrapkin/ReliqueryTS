@@ -11,7 +11,7 @@ import { NamedImportStatement } from '../SourceWriter/imports/NamedImportStateme
 import { NamedImport } from '../SourceWriter/imports/NamedImport';
 import { TypeParameter } from '../SourceWriter/types/TypeParameter';
 import { TypedVariable } from '../SourceWriter/types/TypedVariable';
-import { encodeName } from '../util/SourceFileHelper';
+import { encodeName } from '../compiler/SourceFileHelper';
 import { InstantiationStatement } from '../SourceWriter/classes/InstantiationStatement';
 import { NullishCoalescingOperator } from '../SourceWriter/control/NullishCoalescingOperator';
 import { Statement } from '../SourceWriter/Statement';

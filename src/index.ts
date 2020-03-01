@@ -1,16 +1,18 @@
 import { Node, Program, SourceFile, TransformationContext } from 'typescript';
-import { SourceFileHelper } from './util/SourceFileHelper';
-import { InterfaceCollector } from './util/InterfaceCollector';
-import { AllClassCollector } from './util/AllClassCollector';
-import { RelicClassCollector } from './util/RelicClassCollector';
-import { ResolutionGraph } from './container/ResolutionGraph';
+import { SourceFileHelper } from './compiler/SourceFileHelper';
+import { InterfaceCollector } from './compiler/InterfaceCollector';
+import { AllClassCollector } from './compiler/AllClassCollector';
+import { RelicClassCollector } from './compiler/RelicClassCollector';
 import { Logger } from './logger';
-import { InjectedClassCollector } from './util/InjectedClassCollector';
-import { FactoryClassCollector } from './util/FactoryClassCollector';
-import { ConstructorCollector } from './util/ConstructorCollector';
+import { InjectedClassCollector } from './compiler/InjectedClassCollector';
+import { FactoryClassCollector } from './compiler/FactoryClassCollector';
+import { ConstructorCollector } from './compiler/ConstructorCollector';
 import { ConstructorVerifier } from './container/ConstructorVerifier';
 import { Project } from 'ts-morph';
 import { ContainerWriter } from './container/ContainerDescriptor';
+import { writeFileSync } from 'fs';
+import path from 'path';
+import { IncrementalLog } from './incremental/IncrementalLog';
 
 interface HelperListItem {
   helper?: SourceFileHelper<Node>[] | SourceFileHelper<Node>;
@@ -39,18 +41,30 @@ export function chainHelpers(node: SourceFile, ...helpers: HelperListItem[]) {
 }
 
 export default function transform(program: Program) {
-  const graph: ResolutionGraph = new ResolutionGraph();
-  const constructorVerifier = new ConstructorVerifier({}, graph);
+
   const project = new Project({
     compilerOptions: program.getCompilerOptions(),
+    useInMemoryFileSystem: true,
   });
+  const cachePath = path.resolve(
+    path.dirname(project.getCompilerOptions().tsBuildInfoFile || project.getCompilerOptions().baseUrl || '.'),
+    '.reliqueryinfo'
+  );
+  const incrementalLog = IncrementalLog.readFromFile(cachePath);
+  let graph = incrementalLog.generateGraph();
+  const constructorVerifier = new ConstructorVerifier({}, graph);
 
   return {
     before(context: TransformationContext) {
       return (sourceFile: SourceFile) => {
+        if (sourceFile.fileName.endsWith('container.ts')) {
+          return sourceFile;
+        }
+
         const allClassCollector = new AllClassCollector(sourceFile, context);
-        const singletonClassCollector = new RelicClassCollector(sourceFile, context);
         const interfaceCollector = new InterfaceCollector(sourceFile, context);
+
+        const singletonClassCollector = new RelicClassCollector(sourceFile, context);
         const injectedClassCollector = new InjectedClassCollector(sourceFile, context);
         const factoryClassCollector = new FactoryClassCollector(sourceFile, context);
         const constructorCollector = new ConstructorCollector(sourceFile, context);
@@ -60,8 +74,10 @@ export default function transform(program: Program) {
           {
             helper: [interfaceCollector, allClassCollector, constructorCollector],
             after: () => {
-              graph.addClasses(allClassCollector.collectedClasses);
-              graph.addInterfaces(interfaceCollector.exportedInterfaces);
+              incrementalLog.collectClasses(sourceFile.fileName, allClassCollector.collectedClasses);
+              incrementalLog.collectInterfaces(sourceFile.fileName, interfaceCollector.exportedInterfaces);
+              incrementalLog.collectCtors(sourceFile.fileName, constructorCollector.collectedConstructors);
+
               constructorVerifier.addConstructors(constructorCollector.collectedConstructors);
             },
           },
@@ -72,26 +88,41 @@ export default function transform(program: Program) {
             helper: [singletonClassCollector, injectedClassCollector, factoryClassCollector],
             after: () => {
               singletonClassCollector.collectedClasses.forEach(exportedClass =>
-                graph.registerClass({ ...exportedClass.fullyQualifiedName, isSingleton: true })
+                incrementalLog.register({...exportedClass.fullyQualifiedName, isSingleton: true})
               );
 
               injectedClassCollector.collectedClasses.forEach(injectedClass =>
-                graph.registerClass({ ...injectedClass.fullyQualifiedName, isSingleton: true })
+                incrementalLog.register({ ...injectedClass.fullyQualifiedName, isSingleton: true })
               );
 
               factoryClassCollector.collectedClasses.forEach(classForFactory =>
-                graph.registerClass(classForFactory.fullyQualifiedName)
+                incrementalLog.register(classForFactory.fullyQualifiedName)
               );
             },
           },
           {
             after: () => {
+              constructorVerifier.graph = graph = incrementalLog.generateGraph();
+
               const writer = new ContainerWriter(
                 graph.toContainerDescriptor().descriptor,
                 project,
                 constructorVerifier
               );
-              console.log(writer.write());
+
+              project
+                .createSourceFile('container.ts', writer.write(), { overwrite: true })
+                .organizeImports()
+                .getEmitOutput()
+                .getOutputFiles()
+                .forEach(outputFile => {
+                  writeFileSync(outputFile.getFilePath(), outputFile.getText());
+                });
+            },
+          },
+          {
+            after() {
+              incrementalLog.writeToFile(cachePath);
             },
           }
         );

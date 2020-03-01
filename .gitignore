@@ -544,3 +544,4 @@ package-lock.json
 
 coverage/*
 .clinic
+.reliqueryinfo

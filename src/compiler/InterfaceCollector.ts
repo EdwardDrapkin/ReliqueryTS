@@ -1,11 +1,7 @@
 import { FullyQualifiedSymbol, InterfaceDeclarationHelper } from './SourceFileHelper';
 import { InterfaceDeclaration, SyntaxKind } from 'typescript';
 import { ImportsCollector } from './ImportsCollector';
-
-export interface InterfaceWithHeritage {
-  fullyQualifiedName: FullyQualifiedSymbol;
-  parents: FullyQualifiedSymbol[];
-}
+import { InterfaceWithHeritage } from "./InterfaceWithHeritage";
 
 export class InterfaceCollector extends InterfaceDeclarationHelper {
   private readonly _exportedInterfaces: InterfaceWithHeritage[] = [];
@@ -20,20 +16,17 @@ export class InterfaceCollector extends InterfaceDeclarationHelper {
 
   process(node: InterfaceDeclaration) {
     if (node.modifiers && node.modifiers.filter(e => e.kind === SyntaxKind.ExportKeyword).length > 0) {
-      const interfaceWithHeritage: InterfaceWithHeritage = {
-        fullyQualifiedName: this.qualifySymbol(node.name.getText(node.getSourceFile())),
-        parents: [],
-      };
-
       const { clauses } = this.extractHeritage(node);
+      const parents: FullyQualifiedSymbol[] = [];
+      const fullyQualifiedName: FullyQualifiedSymbol = this.qualifySymbol(node.name.getText(node.getSourceFile()));
 
       clauses.forEach(clause => {
         clause.forEach(fullyQualifiedSymbol => {
-          interfaceWithHeritage.parents.push(fullyQualifiedSymbol);
+          parents.push(fullyQualifiedSymbol);
         });
       });
 
-      this._exportedInterfaces.push(interfaceWithHeritage);
+      this._exportedInterfaces.push(new InterfaceWithHeritage(fullyQualifiedName, parents));
     }
 
     return node;

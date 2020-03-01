@@ -3,10 +3,33 @@ import { ClassDeclaration } from 'typescript';
 import { FullyQualifiedSymbol } from './SourceFileHelper';
 import { createWrappedNode } from 'ts-morph';
 import { ImportsCollector } from './ImportsCollector';
+import { IncrementallyLoggable } from '../incremental/IncrementalLog';
+import crypto from 'crypto';
 
-export interface ClassWithConstructor {
-  fullyQualifiedName: FullyQualifiedSymbol;
-  constructorParams: FullyQualifiedSymbol[];
+export class ClassWithConstructor implements IncrementallyLoggable<ClassWithConstructor> {
+  constructor(public fullyQualifiedName: FullyQualifiedSymbol, public constructorParams: FullyQualifiedSymbol[]) {}
+
+  static deserialize(input: string) {
+    const parsed = JSON.parse(input);
+    return new ClassWithConstructor(parsed.fullyQualifiedName, parsed.constructorParams);
+  }
+
+  compareTo(other: ClassWithConstructor): number {
+    return other.hash().localeCompare(this.hash());
+  }
+
+  hash() {
+    const hash = crypto.createHash('sha1');
+    hash.update(this.serialize());
+    return hash.digest('hex');
+  }
+
+  serialize() {
+    return JSON.stringify({
+      fullyQualifiedName: this.fullyQualifiedName,
+      constructorParams: this.constructorParams,
+    });
+  }
 }
 
 export class ConstructorCollector extends AllClassCollector {
@@ -48,10 +71,7 @@ export class ConstructorCollector extends AllClassCollector {
 
       const fqn = this.qualifySymbol(node.name?.getText(node.getSourceFile()) ?? 'default');
 
-      this._collectedConstructors[fqn.encodedName] = {
-        fullyQualifiedName: fqn,
-        constructorParams: constructorParams ?? [],
-      };
+      this._collectedConstructors[fqn.encodedName] = new ClassWithConstructor(fqn, constructorParams ?? []);
     });
 
     return node;

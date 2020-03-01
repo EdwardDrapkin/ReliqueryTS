@@ -1,12 +1,8 @@
-import { ClassDeclarationHelper, FullyQualifiedSymbol } from './SourceFileHelper';
+import { ClassDeclarationHelper } from './SourceFileHelper';
 import { ClassDeclaration, SourceFile, SyntaxKind, TransformationContext } from 'typescript';
 import { ImportsCollector } from './ImportsCollector';
+import { ClassWithHeritage } from "./ClassWithHeritage";
 
-export interface ClassWithHeritage {
-  fullyQualifiedName: FullyQualifiedSymbol;
-  implementedInterfaces: FullyQualifiedSymbol[];
-  parentClass?: FullyQualifiedSymbol;
-}
 
 export class AllClassCollector extends ClassDeclarationHelper {
   protected readonly _collectedClasses: ClassWithHeritage[] = [];
@@ -32,10 +28,7 @@ export class AllClassCollector extends ClassDeclarationHelper {
       const { node: next, clauses } = this.extractHeritage(node);
       node = next;
 
-      const classDeclaration: ClassWithHeritage = {
-        fullyQualifiedName: this.qualifySymbol(node.name?.getText(node.getSourceFile()) ?? 'default'),
-        implementedInterfaces: [],
-      };
+      const classDeclaration: ClassWithHeritage = new ClassWithHeritage(this.qualifySymbol(node.name?.getText(node.getSourceFile()) ?? 'default'))
 
       if (clauses) {
         clauses.forEach(clause => {
