@@ -1,11 +1,8 @@
 import {
   isClassDeclaration,
-  isConstructorDeclaration,
-  isDecorator,
   isImportDeclaration,
-  isImportSpecifier,
   isInterfaceDeclaration,
-  isSourceFile,
+  isVariableDeclaration,
   Node,
   NodeArray,
   SourceFile,
@@ -17,6 +14,7 @@ import path from 'path';
 import { ImportPathsResolver } from '@zerollup/ts-helpers';
 import { Signale } from 'signale';
 import { subLogger } from '../logger';
+import fs from "fs";
 
 export interface FullyQualifiedSymbol {
   relativeFilePath: string;
@@ -93,6 +91,12 @@ export class SourceFileHelper<T extends Node> {
     // this.logger.time('Processing source');
     this.hasProcessed = true;
 
+    const result = visitEachChild(node, this.getVisitor(), this.context);
+    // this.logger.timeEnd();
+    return result;
+  }
+
+  public getVisitor(): (node: Node) => VisitResult<Node> {
     const visitor = (node: Node): VisitResult<Node> => {
       if (this.filterNode(node)) {
         return this.process(node);
@@ -100,9 +104,32 @@ export class SourceFileHelper<T extends Node> {
       return visitEachChild(node, visitor, this.context);
     };
 
-    const result = visitEachChild(node, visitor, this.context);
-    // this.logger.timeEnd();
-    return result;
+    return visitor;
+  }
+
+  resolveRelativeImport(importedFrom: string) {
+    const fileWithoutExt = path.resolve(path.dirname(this.sourceFile.fileName), importedFrom);
+
+    if (fs.existsSync(`${fileWithoutExt}.ts`)) {
+      return path.resolve(this.context.getCompilerOptions().baseUrl || process.cwd(), `${fileWithoutExt}.ts`);
+    } else if (fs.existsSync(`${fileWithoutExt}.tsx`)) {
+      return path.resolve(this.context.getCompilerOptions().baseUrl || process.cwd(), `${fileWithoutExt}.tsx`);
+    }
+
+    throw new Error(`Could not resolve ${importedFrom} in ${this.sourceFile.fileName}`);
+  }
+
+  resolveAbsoluteImport(importedFrom: string) {
+    const suggestions = new ImportPathsResolver(this.context.getCompilerOptions()).getImportSuggestions(
+      importedFrom,
+      path.dirname(this.sourceFile.fileName)
+    );
+
+    if (suggestions === undefined) {
+      throw new Error(`Could not resolve (and qualify): ${importedFrom} from ${this.sourceFile.fileName}`);
+    }
+
+    return suggestions[0];
   }
 }
 
@@ -120,10 +147,7 @@ export function helperClassFactory<T extends Node>(
   };
 }
 
-export const SourceFileNodeHelper = helperClassFactory(isSourceFile);
 export const ImportDeclarationHelper = helperClassFactory(isImportDeclaration);
-export const ImportSpecifierHelper = helperClassFactory(isImportSpecifier);
-export const ConstructorDeclarationHelper = helperClassFactory(isConstructorDeclaration);
 export const ClassDeclarationHelper = helperClassFactory(isClassDeclaration);
-export const DecoratorHelper = helperClassFactory(isDecorator);
 export const InterfaceDeclarationHelper = helperClassFactory(isInterfaceDeclaration);
+export const VariableDeclarationHelper = helperClassFactory(isVariableDeclaration);

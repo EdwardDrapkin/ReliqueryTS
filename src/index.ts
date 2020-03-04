@@ -13,6 +13,7 @@ import { ContainerWriter } from './container/ContainerDescriptor';
 import { writeFileSync } from 'fs';
 import path from 'path';
 import { IncrementalLog } from './incremental/IncrementalLog';
+import { HydrateCallRewriter } from "./compiler/HydrateCallRewriter";
 
 interface HelperListItem {
   helper?: SourceFileHelper<Node>[] | SourceFileHelper<Node>;
@@ -69,9 +70,12 @@ export default function transform(program: Program) {
         const factoryClassCollector = new FactoryClassCollector(sourceFile, context);
         const constructorCollector = new ConstructorCollector(sourceFile, context);
 
+        const hydrateCallRewriter = new HydrateCallRewriter(sourceFile, context);
+
         return chainHelpers(
           sourceFile,
           {
+            // collect everything we *might* care about
             helper: [interfaceCollector, allClassCollector, constructorCollector],
             after: () => {
               incrementalLog.collectClasses(sourceFile.fileName, allClassCollector.collectedClasses);
@@ -85,6 +89,7 @@ export default function transform(program: Program) {
             after: () => {},
           },
           {
+            // collect everything registered with the container
             helper: [singletonClassCollector, injectedClassCollector, factoryClassCollector],
             after: () => {
               singletonClassCollector.collectedClasses.forEach(exportedClass =>
@@ -101,6 +106,14 @@ export default function transform(program: Program) {
             },
           },
           {
+            // rewrite any injection sites (veins?)
+            helper: [hydrateCallRewriter],
+            after: () => {
+
+            }
+          },
+          {
+            // finally construct the graph
             after: () => {
               constructorVerifier.graph = graph = incrementalLog.generateGraph();
 
