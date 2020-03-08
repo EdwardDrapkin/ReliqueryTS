@@ -1,5 +1,6 @@
 import { AllClassCollector } from './AllClassCollector';
-import { ClassDeclaration, Decorator, isIdentifier, SyntaxKind, updateClassDeclaration } from 'typescript';
+import { ClassDeclaration, Decorator, isIdentifier, SourceFile, SyntaxKind, updateClassDeclaration } from 'typescript';
+import { ImportsCollector } from "./ImportsCollector";
 
 export class DecoratedClassCollector extends AllClassCollector {
   protected _collectSymbols: string[] = [];
@@ -16,6 +17,22 @@ export class DecoratedClassCollector extends AllClassCollector {
     this._collectSymbols = newSymbols;
   }
 
+  visit(sourceFile: SourceFile) {
+    const collector = this.to(ImportsCollector);
+    collector.visit(sourceFile);
+    const foundSymbols: string[] = [];
+
+    Object.entries(collector.importedIdentifiers).forEach(([symbol, entry]) => {
+      let idx = this._collectSymbols.indexOf(entry.name);
+      if(entry.relativeFilePath === 'reliquery' && idx > -1) {
+        foundSymbols.push(symbol);
+      }
+    });
+
+    this._collectSymbols = foundSymbols;
+
+    return super.visit(sourceFile);
+  }
   process(clazz: ClassDeclaration) {
     const { node, modified } = this.stripDecorators(clazz);
 
