@@ -20,6 +20,7 @@ import { ReturnStatement } from "../SourceWriter/control/ReturnStatement";
 import { VariableAssignmentStatement } from "../SourceWriter/VariableAssignmentStatement";
 import { ThrowStatement } from "../SourceWriter/control/ThrowStatement";
 import { ParentheticalStatement } from "../SourceWriter/ParentheticalStatement";
+import { ObjectLiteral } from "../SourceWriter/ObjectLiteral";
 
 export interface Resolution {
   name: string;
@@ -96,7 +97,13 @@ export class ContainerWriter {
       .add(
         new TypeAlias('L')
           .setInitializer(
-            new AssignmentExpression().setRightHandSide('typeof lookupTable')
+            new AssignmentExpression().setRightHandSide(
+              new ObjectLiteral()
+                .addMembers(
+                  Object.entries(this.descriptor.lookupTable)
+                    .map(([key, value]) => [key, `typeof ${value}`])
+                ).getAsString()
+            )
           )
       )
       .add(
