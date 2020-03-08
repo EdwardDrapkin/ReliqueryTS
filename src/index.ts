@@ -10,10 +10,11 @@ import { ConstructorCollector } from './compiler/ConstructorCollector';
 import { ConstructorVerifier } from './container/ConstructorVerifier';
 import { Project } from 'ts-morph';
 import { ContainerWriter } from './container/ContainerDescriptor';
-import { writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { IncrementalLog } from './incremental/IncrementalLog';
-import { HydrateCallRewriter } from "./compiler/HydrateCallRewriter";
+import { HydrateCallRewriter } from './compiler/HydrateCallRewriter';
+import { ReliqueryImportsRemover } from "./compiler/ReliqueryImportsRemover";
 
 interface HelperListItem {
   helper?: SourceFileHelper<Node>[] | SourceFileHelper<Node>;
@@ -41,16 +42,15 @@ export function chainHelpers(node: SourceFile, ...helpers: HelperListItem[]) {
   return node;
 }
 
-export default function transform(program: Program) {
-
-  const project = new Project({
-    compilerOptions: program.getCompilerOptions(),
-    useInMemoryFileSystem: true,
-  });
-  const cachePath = path.resolve(
+export function transformWithOptions(
+  program: Program,
+  project: Project,
+  writeFiles: boolean = true,
+  cachePath: string = path.resolve(
     path.dirname(project.getCompilerOptions().tsBuildInfoFile || project.getCompilerOptions().baseUrl || '.'),
     '.reliqueryinfo'
-  );
+  ),
+) {
   const incrementalLog = IncrementalLog.readFromFile(cachePath);
   let graph = incrementalLog.generateGraph();
   const constructorVerifier = new ConstructorVerifier({}, graph);
@@ -71,6 +71,7 @@ export default function transform(program: Program) {
         const constructorCollector = new ConstructorCollector(sourceFile, context);
 
         const hydrateCallRewriter = new HydrateCallRewriter(sourceFile, context);
+        const reliqueryImportsRemover = new ReliqueryImportsRemover(sourceFile, context);
 
         return chainHelpers(
           sourceFile,
@@ -93,7 +94,7 @@ export default function transform(program: Program) {
             helper: [singletonClassCollector, injectedClassCollector, factoryClassCollector],
             after: () => {
               singletonClassCollector.collectedClasses.forEach(exportedClass =>
-                incrementalLog.register({...exportedClass.fullyQualifiedName, isSingleton: true})
+                incrementalLog.register({ ...exportedClass.fullyQualifiedName, isSingleton: true })
               );
 
               injectedClassCollector.collectedClasses.forEach(injectedClass =>
@@ -107,14 +108,17 @@ export default function transform(program: Program) {
           },
           {
             // rewrite any injection sites (veins?)
-            helper: [hydrateCallRewriter],
-            after: () => {
-
-            }
+            helper: [hydrateCallRewriter, reliqueryImportsRemover],
+            after: () => {},
           },
           {
             // finally construct the graph
             after: () => {
+              const maybeErrors = constructorVerifier.getHumanReadableVerificationErrors();
+
+              if(maybeErrors.length > 0) {
+                throw new Error(maybeErrors.join('\n'))
+              }
               constructorVerifier.graph = graph = incrementalLog.generateGraph();
 
               const writer = new ContainerWriter(
@@ -123,14 +127,21 @@ export default function transform(program: Program) {
                 constructorVerifier
               );
 
-              project
+              const createdFile = project
                 .createSourceFile('container.ts', writer.write(), { overwrite: true })
-                .organizeImports()
-                .getEmitOutput()
-                .getOutputFiles()
-                .forEach(outputFile => {
-                  writeFileSync(outputFile.getFilePath(), outputFile.getText());
-                });
+                .organizeImports();
+
+              if (writeFiles) {
+                createdFile
+                  .getEmitOutput()
+                  .getOutputFiles()
+                  .forEach(outputFile => {
+                    if (!existsSync(path.dirname(outputFile.getFilePath()))) {
+                      mkdirSync(path.dirname(outputFile.getFilePath()));
+                    }
+                    writeFileSync(outputFile.getFilePath(), outputFile.getText());
+                  });
+              }
             },
           },
           {
@@ -148,4 +159,13 @@ export default function transform(program: Program) {
       };
     },
   };
+}
+
+export default function transform(program: Program) {
+  const project = new Project({
+    compilerOptions: program.getCompilerOptions(),
+    useInMemoryFileSystem: true,
+  });
+
+  return transformWithOptions(program, project);
 }
