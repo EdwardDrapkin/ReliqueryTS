@@ -63,13 +63,13 @@ export class ImportsCollector extends ImportDeclarationHelper {
     const identifiers = this.extractIdentifiersFromImportClause(importClause);
 
     identifiers.forEach(identifier => {
-      if(importedFrom === 'reliquery') {
-        if (Array.isArray(identifier)) {
-          this.hasHydrateAs = identifier[1];
-        } else {
-          this.hasHydrateAs = identifier;
-        }
-      } else if (Array.isArray(identifier)) {
+      if (importedFrom === 'reliquery' && Array.isArray(identifier) && identifier[0] === 'hydrate') {
+        this.hasHydrateAs = identifier[1];
+      } else if (importedFrom === 'reliquery' && !Array.isArray(identifier) && identifier === 'hydrate') {
+        this.hasHydrateAs = identifier;
+      }
+
+      if (Array.isArray(identifier)) {
         this._importedIdentifiers[identifier[1]] = this.qualifySymbol(
           identifier[0],
           path.resolve(this.context.getCompilerOptions().baseUrl || process.cwd(), relativeFilePath)
