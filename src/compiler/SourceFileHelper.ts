@@ -1,7 +1,7 @@
 import {
   isClassDeclaration,
   isImportDeclaration,
-  isInterfaceDeclaration,
+  isInterfaceDeclaration, isSourceFile,
   isVariableDeclaration,
   Node,
   NodeArray,
@@ -20,6 +20,10 @@ export interface FullyQualifiedSymbol {
   relativeFilePath: string;
   name: string;
   encodedName: string;
+}
+
+export function stringOfSymbol(fq: FullyQualifiedSymbol) {
+  return `${fq.relativeFilePath}::${fq.name}/${fq.encodedName}`
 }
 
 export function encodeName(path: string, name: string) {
@@ -87,16 +91,9 @@ export class SourceFileHelper<T extends Node> {
     return node;
   }
 
-  public visit(node: SourceFile = this.sourceFile) {
-    // this.logger.time('Processing source');
+  public visit(node: SourceFile = this.sourceFile): SourceFile {
     this.hasProcessed = true;
 
-    const result = visitEachChild(node, this.getVisitor(), this.context);
-    // this.logger.timeEnd();
-    return result;
-  }
-
-  public getVisitor(): (node: Node) => VisitResult<Node> {
     const visitor = (node: Node): VisitResult<Node> => {
       if (this.filterNode(node)) {
         return this.process(node);
@@ -104,7 +101,8 @@ export class SourceFileHelper<T extends Node> {
       return visitEachChild(node, visitor, this.context);
     };
 
-    return visitor;
+
+    return visitEachChild(node, visitor, this.context);
   }
 
   resolveRelativeImport(importedFrom: string) {
@@ -120,6 +118,10 @@ export class SourceFileHelper<T extends Node> {
   }
 
   resolveAbsoluteImport(importedFrom: string) {
+    if(importedFrom === 'reliquery') {
+      return importedFrom;
+    }
+
     const suggestions = new ImportPathsResolver(this.context.getCompilerOptions()).getImportSuggestions(
       importedFrom,
       path.dirname(this.sourceFile.fileName)
@@ -151,3 +153,4 @@ export const ImportDeclarationHelper = helperClassFactory(isImportDeclaration);
 export const ClassDeclarationHelper = helperClassFactory(isClassDeclaration);
 export const InterfaceDeclarationHelper = helperClassFactory(isInterfaceDeclaration);
 export const VariableDeclarationHelper = helperClassFactory(isVariableDeclaration);
+export const SourceFileHelperInst = helperClassFactory(isSourceFile);
