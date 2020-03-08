@@ -9,3 +9,70 @@ Reliquery works by parsing your source files, collecting entities that are tagge
 Once the injectable entities have been collected, a static singleton is generated that simply maps fully qualified names (a safe representation of original source path and exported symbol name, due to JS/TS having frequent name collisions) to either singletons or factory methods.
 
 Finally, Reliquery rewrites the emitted JS at injection sites.  A class constructor such as `constructor(foo: MyFoo) {}` will get invoked in the container as `new FooUser(container.get('unique_string_of_MyFoo'))`.  When you retrieve things from the container (via `const myFoo = hydrate<MyFoo>()`), that code is simply rewritten to the correct `container.get()` call.  Modern JS runtimes should inline everything the container does, so the runtime overhead of Reliquery should be immeasurably small.  
+
+### Installation
+
+First, install reliquery and ttypescript:
+
+```shell script
+yarn add --dev reliquery ttypescript
+```
+
+Next, add the relevant section to your `tsconfig.json`:
+```json
+{
+  "compilerOptions": {
+    "plugins": [
+      {
+        "transform": "reliquery"
+      }
+    ]
+  }
+}
+```
+
+That's it! You're ready to use reliquery!
+
+### Usage
+
+##### 1. Annotate your classes
+For factory classes:
+```typescript
+import { Factory } from 'reliquery';
+
+@Factory
+export class CreatedMultipleTimes { /* ... */ }
+```
+
+For singleton classes:
+```typescript
+import { Singleton } from 'reliquery';
+
+@Singleton
+export class CreatedOnce { /* ... */ }
+```
+
+Constructor parameters are automatically provided:
+```typescript
+import { Singleton } from 'reliquery';
+
+@Singleton
+export class WithParameters { 
+  constructor(first: CreatedMultipleTimes, second: CreatedOnce) { /* ... */ }
+}
+```
+
+##### 2. Access your hydrated instances
+
+```typescript
+const myInstance: WithParameters = hydrate();
+```
+
+**or**
+
+
+```typescript
+const myInstance = hydrate<WithParameters>();
+```
+
+##### 3. That's it! Just compile using ttsc instead of tsc and enjoy the magic!
