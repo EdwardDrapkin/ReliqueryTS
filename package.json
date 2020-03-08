@@ -1,6 +1,6 @@
 {
   "name": "reliquery",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "dist/index.js",
   "typings": "index.d.ts",
   "license": "MIT",
@@ -25,7 +25,6 @@
   },
   "scripts": {
     "build": "ttsc -b",
-    "pretest": "build",
     "test": "jest --testPathPattern __tests__",
     "test:watch": "jest --testPathPattern __tests__ --watch"
   }
