@@ -6,6 +6,7 @@ import { ResolutionGraph, ResolutionGraphNode } from '../container/ResolutionGra
 import { readFileSync, writeFileSync } from 'fs';
 import { ClassWithConstructor } from '../compiler/ConstructorCollector';
 import { InterfaceWithHeritage } from "../compiler/InterfaceWithHeritage";
+import { stringOfSymbol } from "../compiler/SourceFileHelper";
 
 export interface IncrementallyLoggable<T> extends Serializable, Hashable, Comparable<T> {}
 
@@ -27,7 +28,9 @@ interface SerializedCache {
     }>;
   };
 
-  registrations: ResolutionGraphNode[];
+  registrations: {
+    [uniqueName: string]: ResolutionGraphNode
+  };
 }
 
 interface StepCache {
@@ -50,7 +53,9 @@ interface StepCache {
     }>;
   };
 
-  registrations: ResolutionGraphNode[]
+  registrations: {
+    [uniqueName: string]: ResolutionGraphNode
+  };
 
   dirty: boolean;
 }
@@ -66,7 +71,7 @@ export class IncrementalLog {
       collectInterfaces: [],
       collectConstructors: [],
     },
-    registrations: [],
+    registrations: {},
     dirty: false,
   };
 
@@ -192,13 +197,13 @@ export class IncrementalLog {
       graph.addInterfaces(interfaces);
     });
 
-    this.stepCache.registrations.forEach(registration => graph.registerClass(registration));
+    Object.values(this.stepCache.registrations).forEach(registration => graph.registerClass(registration));
 
     return graph;
   }
 
   register(node: ResolutionGraphNode) {
-    this.stepCache.registrations.push(node);
+    this.stepCache.registrations[stringOfSymbol(node)] = node;
   }
 
   collectCtors(fileName: string, ctors: { [encodedName: string]: ClassWithConstructor }): boolean {
