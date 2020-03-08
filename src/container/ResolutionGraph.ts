@@ -169,7 +169,7 @@ export class ResolutionGraph {
         this.lookupTable.classes[resolvesForKey]?.[0]?.fullyQualifiedName;
 
       if (!fqn) {
-        throw new Error(`Could not re-resolve ${resolvesForKey}`);
+        throw new Error(`Could not re-resolve ${resolvesForKey}.  Are you sure the symbol is exported?`);
       }
 
       let potentialResolutions = this.resolvesFor[resolvesForKey].reduce((acc, curr) => {
