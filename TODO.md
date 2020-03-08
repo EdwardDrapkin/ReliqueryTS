@@ -11,7 +11,7 @@ Nothing yet :'(
 * [X] constructor injection
 * [X] circular dependency checking
 * [X] hydrate<T>() entry point
-* [ ] tests
+* [X] tests
 * [ ] `@Qualify<Interface>` to resolve multiple dependencies with an interface 
 * [ ] `@Qualify(...types: QualificationType[ ])` where QualificationType is an enum of `Singleton`, `Factory`, `Function`, `Class`, etc.
 * [ ] automatic typeof registration injection `hydrate<typeof Foo>()` automatically fully qualifies Foo, registers it, and then replaces the callsite with a resolution
