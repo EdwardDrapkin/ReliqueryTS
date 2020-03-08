@@ -3,7 +3,8 @@ import { Signale } from 'signale';
 const Logger = new Signale({
   scope: 'reliquery',
   // @ts-ignore
-  logLevel: process.env.RELIQUERY_DEBUG ? 'info' : 'error',
+  logLevel: 'info',
+  disabled: !process.env.RELIQUERY_DEBUG,
   types: {
     trace: {
       badge: '🦶',
