@@ -81,13 +81,16 @@ readdirSync(path.resolve(__dirname, 'containers'), { withFileTypes: true })
     errors[testSuiteName].push(...program.getSemanticDiagnostics())
     errors[testSuiteName].push(...program.getConfigFileParsingDiagnostics())
 
-    containers[testSuiteName] = require(path.resolve(testSuite, 'dist', 'container.js')).container as {
-      resolve(name: string): unknown;
-    };
+    if (existsSync(path.resolve(testSuite, 'dist', 'container.js'))) {
+      containers[testSuiteName] = require(path.resolve(testSuite, 'dist', 'container.js')).container as {
+        resolve(name: string): unknown;
+      };
+    }
 
     if(existsSync(path.resolve(testSuite, 'dist', 'index.js'))) {
       exported[testSuiteName] = require(path.resolve(testSuite, 'dist', 'index.js'));
     }
+
   });
 
 export { containers, errors, exported };
