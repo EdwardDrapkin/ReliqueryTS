@@ -1,4 +1,4 @@
-import { ClassWithConstructor } from '../compiler/ConstructorCollector';
+import { ClassWithConstructor, PotentialType } from '../compiler/ConstructorCollector';
 import { ResolutionGraph } from './ResolutionGraph';
 import { ClassWithHeritage } from "../compiler/ClassWithHeritage";
 
@@ -56,14 +56,14 @@ export class ConstructorVerifier {
       .reduce((acc, curr) => ({ ...acc, ...curr }), {});
   }
 
-  getCallableConstructorParams(encodedName: string): string[] {
+  getCallableConstructorParams(encodedName: string): PotentialType[] {
     const clazz = this.getClass(encodedName);
     if (!clazz && !this.graph.lookupTable.interfaces[encodedName]) {
       throw new Error(`Could not resolve ${encodedName}`);
     }
 
     if (this.ctors[encodedName]) {
-      return this.ctors[encodedName].constructorParams.map(e => e.encodedName ?? 'ERROR');
+      return this.ctors[encodedName].constructorParams.map(e => e ?? 'ERROR');
     }
 
     if (!clazz || !clazz.parentClass) {
@@ -91,18 +91,28 @@ export class ConstructorVerifier {
     if (ctor) {
       let valid: string[] | true = true;
       ctor.constructorParams.forEach(param => {
-        if (!PRIMITIVES[param.encodedName]) {
+        const checkParam = (name: string) => {
+          if(PRIMITIVES[name]) {
+            return;
+          }
+
           if (cycle.indexOf(clazz.fullyQualifiedName.encodedName) > -1) {
             valid = cycle.concat(clazz.fullyQualifiedName.encodedName);
           } else {
-            valid = this.getClass(param.encodedName)
+            valid = this.getClass(name)
               ? this.isValid(
-                  this.getClass(param.encodedName)!,
-                  this.ctors[param.encodedName],
-                  cycle.concat(clazz.fullyQualifiedName.encodedName)
-                )
+                this.getClass(name)!,
+                this.ctors[name],
+                cycle.concat(clazz.fullyQualifiedName.encodedName)
+              )
               : true;
           }
+        }
+
+        if (param.type === 'single') {
+          checkParam(param.symbol.encodedName);
+        } else {
+          param.symbols.forEach(e => checkParam(e.encodedName))
         }
       });
 

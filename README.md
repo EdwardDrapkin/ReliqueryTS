@@ -12,10 +12,10 @@ Finally, Reliquery rewrites the emitted JS at injection sites.  A class construc
 
 ### Installation
 
-First, install reliquery and ttypescript:
+First, install reliquery, typescript, and ttypescript:
 
 ```shell script
-yarn add --dev reliquery ttypescript
+yarn add --dev reliquery typescript ttypescript
 ```
 
 Next, add the relevant section to your `tsconfig.json`:
@@ -32,6 +32,8 @@ Next, add the relevant section to your `tsconfig.json`:
 ```
 
 That's it! You're ready to use reliquery!
+
+*NOTE*: Reliquery requires TS 3.8+.
 
 ### Usage
 
@@ -76,3 +78,122 @@ const myInstance = hydrate<WithParameters>();
 ```
 
 ##### 3. That's it! Just compile using ttsc instead of tsc and enjoy the magic!
+
+### Advanced 
+
+#### Advanced types
+##### Union types
+
+Union types are supported.  Given the case of `A | B | C | D`, reliquery will try to resolve A, then B, and so on, until it either finds a resolution or falls all the way through to null.
+
+#### What code gets generated
+
+Let's say you have the following file structure (from the `hydrate` test suite):
+
+**classes.ts**
+```typescript
+import { Factory, Singleton } from 'reliquery';
+
+@Singleton
+export class A {
+  type = 'a';
+}
+
+@Factory
+export class B {
+  type = 'b';
+  constructor(public a: A) {
+
+  }
+}
+```
+
+**index.ts**
+```typescript
+import { hydrate } from 'reliquery';
+import { A, B } from "./classes";
+
+export const a = hydrate<A>();
+export const b: B = hydrate();
+
+```
+
+
+After you compile your code through the Reliquery transformer:
+
+1. Reliquery annotations and imports are removed 
+2. A container is generated
+3. Calls to `hydrate()` are replaced by calls to `container.resolve()`.
+
+So, the `classes.js` file that gets generated looks like:
+```javascript
+Object.defineProperty(exports, "__esModule", { value: true });
+class A {
+    constructor() {
+        this.type = 'a';
+    }
+}
+exports.A = A;
+class B {
+    constructor(a) {
+        this.a = a;
+        this.type = 'b';
+    }
+}
+exports.B = B;
+```
+
+As you can see, any trace of Reliquery is gone.
+
+The container that gets generated is fairly straightforward, even by generated JS standards:
+
+```javascript
+'use strict';
+Object.defineProperty(exports, '__esModule', { value: true });
+// import statements
+const classes_1 = require('./classes');
+// generated container
+const lookupTable = {
+  classes_ts_A: classes_1.A,
+  classes_ts_B: classes_1.B,
+};
+class Container {
+  constructor() {
+    this.singletons = {};
+  }
+  resolve(encodedName) {
+    var _a;
+    switch (encodedName) {
+      case 'classes_ts_A':
+        return (this.singletons['classes_ts_A'] =
+          (_a = this.singletons['classes_ts_A']) !== null && _a !== void 0 ? _a : new lookupTable['classes_ts_A']());
+      case 'classes_ts_B':
+        return new lookupTable['classes_ts_B'](this.resolve('classes_ts_A'));
+      default:
+        return null;
+    }
+  }
+}
+exports.Container = Container;
+exports.container = new Container();
+//# sourceMappingURL=container.js.map
+```
+
+Pretty simple, there's a map of safe strings to classes themselves, then a singleton cache that's not always used, and nested resolve calls. These `resolve` calls are the entirety of the runtime overhead of Reliquery and will likely get eliminated by the JIT.
+
+And, finally, index.js shows the hydrate rewriting:
+```javascript
+"use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const reliquery_container = __importStar(require("./container.js"));
+exports.a = reliquery_container.container.resolve("classes_ts_A");
+exports.b = reliquery_container.container.resolve("classes_ts_B");
+//# sourceMappingURL=index.js.map
+```

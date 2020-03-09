@@ -15,12 +15,12 @@ import { encodeName } from '../compiler/SourceFileHelper';
 import { InstantiationStatement } from '../SourceWriter/classes/InstantiationStatement';
 import { NullishCoalescingOperator } from '../SourceWriter/control/NullishCoalescingOperator';
 import { Statement } from '../SourceWriter/Statement';
-import { SwitchCase } from "../SourceWriter/control/SwitchCase";
-import { ReturnStatement } from "../SourceWriter/control/ReturnStatement";
-import { VariableAssignmentStatement } from "../SourceWriter/VariableAssignmentStatement";
-import { ThrowStatement } from "../SourceWriter/control/ThrowStatement";
-import { ParentheticalStatement } from "../SourceWriter/ParentheticalStatement";
-import { ObjectLiteral } from "../SourceWriter/ObjectLiteral";
+import { SwitchCase } from '../SourceWriter/control/SwitchCase';
+import { ReturnStatement } from '../SourceWriter/control/ReturnStatement';
+import { VariableAssignmentStatement } from '../SourceWriter/VariableAssignmentStatement';
+import { ParentheticalStatement } from '../SourceWriter/ParentheticalStatement';
+import { ObjectLiteral } from '../SourceWriter/ObjectLiteral';
+import { NullLiteral } from "../SourceWriter/NullLiteral";
 
 export interface Resolution {
   name: string;
@@ -122,10 +122,7 @@ export class ContainerWriter {
               .addStatements(() => {
                 const switchStatement = new SwitchCase('encodedName')
                   .setDefault([
-                    new ThrowStatement(
-                      new InstantiationStatement('Error')
-                        .addParameter('`Could not resolve ${encodedName}!`')
-                      )
+                    new ReturnStatement(new NullLiteral())
                   ])
                 Object.entries(this.descriptor.resolutions)
                   .reduce((acc, curr) => {
@@ -154,7 +151,16 @@ export class ContainerWriter {
                     let statement: Statement =
                       new InstantiationStatement(`lookupTable["${encodeName(resolution.importPath, resolution.name)}"]`)
                         .castAs('InstanceType<L[K]>')
-                        .addParameters(ctor.map(a => `this.resolve("${a}")`))
+                        .addParameters(ctor.map(a => {
+                          switch(a.type) {
+                            case "union":
+                              return a.symbols.map(s => `this.resolve("${s.encodedName}")`).join(' ?? ')
+                            case "single":
+                              return `this.resolve("${a.symbol.encodedName}")`
+                            default:
+                              throw new Error(`What even is ${a}?`);
+                         }
+                        }))
 
                     if(resolution.isSingleton) {
                       statement = new ParentheticalStatement()

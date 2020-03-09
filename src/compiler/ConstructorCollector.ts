@@ -1,13 +1,33 @@
 import { AllClassCollector } from './AllClassCollector';
-import { ClassDeclaration } from 'typescript';
+import { ClassDeclaration, isIntersectionTypeNode, isUnionTypeNode } from 'typescript';
 import { FullyQualifiedSymbol } from './SourceFileHelper';
 import { createWrappedNode } from 'ts-morph';
 import { ImportsCollector } from './ImportsCollector';
 import { IncrementallyLoggable } from '../incremental/IncrementalLog';
 import crypto from 'crypto';
 
+export interface UnionOf {
+  type: 'union';
+  symbols: FullyQualifiedSymbol[];
+}
+
+export interface IntersectionOf {
+  type: 'intersection';
+  symbols: FullyQualifiedSymbol[];
+}
+
+export interface SingleType {
+  type: 'single';
+  symbol: FullyQualifiedSymbol;
+}
+
+export type PotentialType = SingleType | UnionOf | IntersectionOf;
+
 export class ClassWithConstructor implements IncrementallyLoggable<ClassWithConstructor> {
-  constructor(public fullyQualifiedName: FullyQualifiedSymbol, public constructorParams: FullyQualifiedSymbol[]) {}
+  constructor(
+    public fullyQualifiedName: FullyQualifiedSymbol,
+    public constructorParams: PotentialType[]
+  ) {}
 
   static deserialize(input: string) {
     const parsed = JSON.parse(input);
@@ -53,20 +73,28 @@ export class ConstructorCollector extends AllClassCollector {
 
     ctors.forEach(ctor => {
       const params = ctor.getParameters();
-      const constructorParams = params.map(param => {
-        const typeName = param.compilerNode.type?.getText(this.sourceFile) ?? null;
+      const constructorParams: PotentialType[] = params.map(param => {
+        const { type } = param.compilerNode;
 
-        if (typeName === null) {
+        if (!type) {
           throw new Error(`Untyped ctor param: ${param.getName()}`);
         }
 
-        let importedFrom = importsCollector.importedIdentifiers[typeName];
-
-        if (!importedFrom) {
-          importedFrom = this.qualifySymbol(typeName);
+        if (isUnionTypeNode(type) || isIntersectionTypeNode(type)) {
+          return {
+            type: isUnionTypeNode(type) ? 'union' : 'intersection',
+            symbols: type.types.map(subType => {
+              const typeName = subType.getText(this.sourceFile);
+              return importsCollector.importedIdentifiers[typeName] ?? this.qualifySymbol(typeName);
+            }),
+          };
         }
 
-        return importedFrom;
+        const typeName = type.getText(this.sourceFile);
+        return {
+          symbol: importsCollector.importedIdentifiers[typeName] ?? this.qualifySymbol(typeName),
+          type: 'single',
+        };
       });
 
       const fqn = this.qualifySymbol(node.name?.getText(node.getSourceFile()) ?? 'default');

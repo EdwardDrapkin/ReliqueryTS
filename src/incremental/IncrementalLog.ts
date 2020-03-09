@@ -65,7 +65,7 @@ interface HasFileName {
 }
 
 export class IncrementalLog {
-  private static EMPTY_CACHE: StepCache = {
+  constructor(public stepCache: StepCache = {
     steps: {
       collectClasses: [],
       collectInterfaces: [],
@@ -73,9 +73,7 @@ export class IncrementalLog {
     },
     registrations: {},
     dirty: false,
-  };
-
-  constructor(private stepCache: StepCache = IncrementalLog.EMPTY_CACHE) {}
+  }) {}
 
   static compareArrays<T extends Comparable<unknown>>(a: T[], b: T[]) {
     if (a === undefined) {
